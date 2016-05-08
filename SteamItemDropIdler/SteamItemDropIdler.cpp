@@ -1,6 +1,14 @@
 #include "stdafx.h"
+#include "token_generator/token_generator.h"
 
 CSteamAPILoader g_steamAPILoader;
+
+void shutdown()
+{
+	printf( "Press enter to exit...\n" );
+	getchar();
+	exit(0);
+}
 
 int main( int argc, char* argv[] )
 //int CALLBACK WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
@@ -50,75 +58,75 @@ int main( int argc, char* argv[] )
 	}
 
 	char consoleTitle[256];
-	sprintf_s( consoleTitle, "Steam Item Drop Idler (%s)", steamAccountName );
+	sprintf_s( consoleTitle, sizeof(consoleTitle), "Steam Item Drop Idler (%s)", steamAccountName );
 	SetConsoleTitleA( consoleTitle );
 
 	// load steam stuff
 	CreateInterfaceFn steam3Factory = g_steamAPILoader.GetSteam3Factory();
 	if ( !steam3Factory ) {
 		printf( "GetSteam3Factory failed\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	IClientEngine* clientEngine = (IClientEngine*)steam3Factory( CLIENTENGINE_INTERFACE_VERSION, NULL );
 	if ( !clientEngine ) {
 		printf( "clientEngine is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	ISteamClient017* steamClient = (ISteamClient017*)steam3Factory( STEAMCLIENT_INTERFACE_VERSION_017, NULL );
 	if ( !steamClient ) {
 		printf( "steamClient is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	HSteamPipe hSteamPipe;
 	HSteamUser hSteamUser = clientEngine->CreateLocalUser( &hSteamPipe, k_EAccountTypeIndividual );
 	if ( !hSteamPipe || !hSteamUser ) {
 		printf( "CreateLocalUser failed (1)\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	IClientBilling* clientBilling = clientEngine->GetIClientBilling( hSteamUser, hSteamPipe, CLIENTBILLING_INTERFACE_VERSION );
 	if ( !clientBilling ) {
 		printf( "clientBilling is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	IClientFriends* clientFriends = clientEngine->GetIClientFriends( hSteamUser, hSteamPipe, CLIENTFRIENDS_INTERFACE_VERSION );
 	if ( !clientFriends ) {
 		printf( "clientFriends is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	IClientUser* clientUser = clientEngine->GetIClientUser( hSteamUser, hSteamPipe, CLIENTUSER_INTERFACE_VERSION );
 	if ( !clientUser ) {
 		printf( "clientUser is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	IClientUtils* clientUtils = clientEngine->GetIClientUtils( hSteamPipe, CLIENTUTILS_INTERFACE_VERSION );
 	if ( !clientUtils ) {
 		printf( "clientUtils is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	ISteamGameCoordinator001* steamGameCoordinator = (ISteamGameCoordinator001*)steamClient->GetISteamGenericInterface( hSteamUser, hSteamPipe, STEAMGAMECOORDINATOR_INTERFACE_VERSION_001 );
 	if ( !steamGameCoordinator ) {
 		printf( "steamGameCoordinator is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	ISteamInventory001* steamInventory = (ISteamInventory001*)steamClient->GetISteamInventory( hSteamUser, hSteamPipe, "STEAMINVENTORY_INTERFACE_V001" );
 	if ( !steamInventory ) {
 		printf( "steamInventory is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	ISteamUser017* steamUser = (ISteamUser017*)steamClient->GetISteamUser( hSteamUser, hSteamPipe, STEAMUSER_INTERFACE_VERSION_017 );
 	if ( !steamUser ) {
 		printf( "steamUser is null\n" );
-		goto funcEnd;
+		shutdown();
 	}
 
 	clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
@@ -151,7 +159,7 @@ int main( int argc, char* argv[] )
 					RequestFreeLicenseResponse_t requestFreeLicenseResponse;
 					if ( !clientUtils->GetAPICallResult( hRequestFreeLicenseForApps, &requestFreeLicenseResponse, sizeof( RequestFreeLicenseResponse_t ), RequestFreeLicenseResponse_t::k_iCallback, &bFailed ) ) {
 						printf( "GetAPICallResult failed\n" );
-						goto funcEnd;
+						shutdown();
 					}
 					if ( requestFreeLicenseResponse.m_EResult == k_EResultOK && requestFreeLicenseResponse.m_nGrantedAppIds == 1 ) {
 						printf( "Added a free license\n" );
@@ -160,7 +168,7 @@ int main( int argc, char* argv[] )
 					}
 					else {
 						printf( "Failed to add a free license. You do not own this game\n" );
-						goto funcEnd;
+						shutdown();
 					}
 				}
 
@@ -192,9 +200,29 @@ int main( int argc, char* argv[] )
 				case k_EResultAccountLogonDeniedNeedTwoFactorCode:
 				{
 					char steamMobileAuthenticatorCode[33];
-					printf( "Enter the Steam Mobile Authenticator code: " );
-					scanf( "%32s", steamMobileAuthenticatorCode );
-					getchar();
+					uint8_t secret[20] = {0};
+					int ret = getSharedSecret(steamAccountName, secret);
+					switch (ret)
+					{
+						case 1:
+							printf("Secret file not found! Can not generate 2FA code.\n");
+							break;
+						case 2:
+							printf("Secret file is invalid. Can not generate 2FA code.\n");
+							break;
+						case 3:
+							printf("Secret is invalid. Can not generate 2FA code.\n");
+							break;
+						default:
+							get2FACode(secret, steamMobileAuthenticatorCode);
+							break;
+					}
+					if (ret > 0)
+					{
+						printf( "Enter the Steam Mobile Authenticator code: " );
+						scanf( "%32s", steamMobileAuthenticatorCode );
+						getchar();
+					}
 
 					(*(void( __thiscall** )(IClientUser*, const char*))(*(DWORD*)clientUser + 196))(clientUser, steamMobileAuthenticatorCode); // SetTwoFactorCode
 					clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
@@ -277,13 +305,13 @@ int main( int argc, char* argv[] )
 					hSteamGameServerUser = steamClient->CreateLocalUser( &hSteamGameServerPipe, k_EAccountTypeGameServer );
 					if ( !hSteamGameServerPipe || !hSteamGameServerUser ) {
 						printf( "CreateLocalUser failed (2)\n" );
-						goto funcEnd;
+						shutdown();
 					}
 
 					steamGameServer = (ISteamGameServer012*)steamClient->GetISteamGameServer( hSteamGameServerUser, hSteamGameServerPipe, STEAMGAMESERVER_INTERFACE_VERSION_012 );
 					if ( !steamGameServer ) {
 						printf( "steamGameServer is null\n" );
-						goto funcEnd;
+						shutdown();
 					}
 
 					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, 440, "3158168" );
@@ -368,8 +396,6 @@ int main( int argc, char* argv[] )
 		Sleep( 1000 );
 	}
 
-funcEnd:
-	printf( "Press enter to exit...\n" );
-	getchar();
+	shutdown();
 	return 0;
 }

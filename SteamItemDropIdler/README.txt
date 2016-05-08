@@ -5,7 +5,7 @@ All this info available on: https://github.com/kokole/SteamItemDropIdler/wiki
 * Features
 	- Works without Steam
 	- Steam Guard support
-	- Steam Mobile Authenticator support
+	- Steam Mobile Authenticator support + 2FA token generation
 	- Multiple instance support
 	- Auto add free game license (for games that you idle only)
 	- Auto reconnect if connection to Steam servers is lost
