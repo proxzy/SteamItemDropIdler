@@ -188,6 +188,8 @@ int main( int argc, char* argv[] )
 
 	bool bPlayingGame = false;
 	bool bPlayingOnServer = false; // for games that require us to be connected to a server
+	uint32 tickCount = 0;
+
 	while ( g_bKeepRunning )
 	{
 		// process steam user callbacks
@@ -508,11 +510,39 @@ int main( int argc, char* argv[] )
 			}
 			else
 			{
+				// SendHeartbeat is safe to call on every frame since the API is internally rate-limited.
 				steamInventory->SendItemDropHeartbeat();
 
-				SteamInventoryResult_t steamInventoryResult;
-				steamInventory->TriggerItemDrop( &steamInventoryResult, dropListDefinition );
-				steamInventory->DestroyResult( steamInventoryResult );
+				// Do not spam
+				if ( tickCount == 0 )
+				{
+					SteamInventoryResult_t steamInventoryResult;
+					if ( steamInventory->TriggerItemDrop( &steamInventoryResult, dropListDefinition ) )
+					{
+						while ( steamInventory->GetResultStatus(steamInventoryResult) == k_EResultPending )
+						{
+							Sleep( 100 );
+						}
+
+						uint32 itemsCount = 0;
+						if ( steamInventory->GetResultItems( steamInventoryResult, NULL, &itemsCount ) && (itemsCount > 0) )
+						{
+							SteamItemDetails_t *details = new SteamItemDetails_t[itemsCount];
+							if ( steamInventory->GetResultItems( steamInventoryResult, details, &itemsCount ) )
+							{
+								for ( uint32 idx = 0; idx < itemsCount; ++idx )
+								{
+									printf( "NEW ITEM: ItemID %llu, Def %d\n", details[idx].m_itemId, details[idx].m_iDefinition );
+								}
+							}
+							delete[] details;
+						}
+					}
+
+					steamInventory->DestroyResult( steamInventoryResult );
+				}
+
+				tickCount = ( tickCount + 1 ) % 10;
 			}
 		}
 
