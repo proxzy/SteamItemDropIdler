@@ -1,64 +1,99 @@
 #include "stdafx.h"
 #include "token_generator/token_generator.h"
 
+#define SIDI_NAME "Steam Item Drop Idler"
+#define SIDI_VERSION "2.03"
+
 CSteamAPILoader g_steamAPILoader;
 
-void shutdown()
+void shutdown( int code )
 {
 	printf( "Press enter to exit...\n" );
 	getchar();
-	exit(0);
+	exit(code);
 }
 
 int main( int argc, char* argv[] )
 {
 	HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
+	char consoleTitle[256];
+	sprintf_s( consoleTitle, sizeof( consoleTitle ), "%s (v%s)", SIDI_NAME, SIDI_VERSION );
+	SetConsoleTitleA( consoleTitle );
 
 	SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN );
-	printf( "--- Made by kokole ---\n" );
+	printf( "--- Originally made by kokole. Modified by Nephrite ---\n" );
 	SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 
-	char steamAccountName[33];
-	char steamAccountPassword[33];
+	char steamAccountName[65];
+	char steamAccountPassword[65];
 	AppId_t appID;
 	SteamItemDef_t dropListDefinition;
 
 	if ( argc == 5 )
 	{
-		strcpy_s( steamAccountName, argv[1] );
-		strcpy_s( steamAccountPassword, argv[2] );
-		sscanf( argv[3], "%d", &appID );
+		if ( strcpy_s( steamAccountName, sizeof( steamAccountName ), argv[1] ) != 0 )
+		{
+			printf( "Account name is too long" );
+			shutdown( 1 );
+		}
+
+		if ( strcpy_s( steamAccountPassword, sizeof( steamAccountPassword ), argv[2] ) != 0 )
+		{
+			printf( "Password is too long" );
+			shutdown( 1 );
+		}
+
+		sscanf( argv[3], "%u", &appID );
 		sscanf( argv[4], "%d", &dropListDefinition );
 
 		memset( argv[1], 0, strlen( argv[1] ) );
 		memset( argv[2], 0, strlen( argv[2] ) );
 
-		printf( "Enter your Steam account name: %s\n", steamAccountName );
-		printf( "Enter your Steam account password: \n" );
-		printf( "Enter the AppID: %d\n", appID );
-		printf( "Enter the drop list definition: %d\n", dropListDefinition );
+		printf( "Steam account name: %s\n", steamAccountName );
+		printf( "Steam account password: **HIDDEN**\n" );
+		printf( "AppID: %u\n", appID );
+		printf( "Drop list definition: %d\n", dropListDefinition );
 	}
 	else
 	{
 		printf( "Enter your Steam account name: " );
-		scanf( "%32s", steamAccountName );
-		getchar(); // skip newline
+		fgets( steamAccountName, sizeof( steamAccountName ), stdin );
+		if ( steamAccountName[strlen( steamAccountName ) - 1] == '\n' ) {
+			steamAccountName[strlen( steamAccountName ) - 1] = '\0';
+		}
+		fflush( stdin );
 
 		printf( "Enter your Steam account password: " );
-		scanf( "%32s", steamAccountPassword );
-		getchar();
+		fgets( steamAccountPassword, sizeof( steamAccountPassword ), stdin );
+		if ( steamAccountPassword[strlen( steamAccountPassword ) - 1] == '\n' ) {
+			steamAccountPassword[strlen( steamAccountPassword ) - 1] = '\0';
+		}
+		fflush( stdin );
 
 		printf( "Enter the AppID: " );
-		scanf( "%d", &appID );
-		getchar();
+		if ( scanf( "%u", &appID ) < 1 )
+		{
+			printf( "Invalid AppID\n" );
+			shutdown( 1 );
+		}
+		fflush( stdin );
 
 		printf( "Enter the drop list definition: " );
-		scanf( "%d", &dropListDefinition );
-		getchar();
+		if ( scanf( "%d", &dropListDefinition ) < 1 )
+		{
+			printf( "Invalid Definition ID\n" );
+			shutdown( 1 );
+		}
+		fflush( stdin );
 	}
 
-	char consoleTitle[256];
-	sprintf_s( consoleTitle, sizeof( consoleTitle ), "Steam Item Drop Idler (%s)", steamAccountName );
+	if ( strlen( steamAccountName ) == 0 || strlen( steamAccountPassword ) == 0 )
+	{
+		printf( "Account name and password cannot be empty\n" );
+		shutdown( 1 );
+	}
+
+	sprintf_s( consoleTitle, sizeof( consoleTitle ), "%s (%s)", SIDI_NAME, steamAccountName );
 	SetConsoleTitleA( consoleTitle );
 
 	// load steam stuff
@@ -66,21 +101,21 @@ int main( int argc, char* argv[] )
 	if ( !steam3Factory )
 	{
 		printf( "GetSteam3Factory failed\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	IClientEngine* clientEngine = (IClientEngine*)steam3Factory( CLIENTENGINE_INTERFACE_VERSION, NULL );
 	if ( !clientEngine )
 	{
 		printf( "clientEngine is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	ISteamClient017* steamClient = (ISteamClient017*)steam3Factory( STEAMCLIENT_INTERFACE_VERSION_017, NULL );
 	if ( !steamClient )
 	{
 		printf( "steamClient is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	HSteamPipe hSteamPipe;
@@ -88,56 +123,56 @@ int main( int argc, char* argv[] )
 	if ( !hSteamPipe || !hSteamUser )
 	{
 		printf( "CreateLocalUser failed (1)\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	IClientBilling* clientBilling = clientEngine->GetIClientBilling( hSteamUser, hSteamPipe, CLIENTBILLING_INTERFACE_VERSION );
 	if ( !clientBilling )
 	{
 		printf( "clientBilling is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	IClientFriends* clientFriends = clientEngine->GetIClientFriends( hSteamUser, hSteamPipe, CLIENTFRIENDS_INTERFACE_VERSION );
 	if ( !clientFriends )
 	{
 		printf( "clientFriends is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	IClientUser* clientUser = clientEngine->GetIClientUser( hSteamUser, hSteamPipe, CLIENTUSER_INTERFACE_VERSION );
 	if ( !clientUser )
 	{
 		printf( "clientUser is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	IClientUtils* clientUtils = clientEngine->GetIClientUtils( hSteamPipe, CLIENTUTILS_INTERFACE_VERSION );
 	if ( !clientUtils )
 	{
 		printf( "clientUtils is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	ISteamGameCoordinator001* steamGameCoordinator = (ISteamGameCoordinator001*)steamClient->GetISteamGenericInterface( hSteamUser, hSteamPipe, STEAMGAMECOORDINATOR_INTERFACE_VERSION_001 );
 	if ( !steamGameCoordinator )
 	{
 		printf( "steamGameCoordinator is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	ISteamInventory001* steamInventory = (ISteamInventory001*)steamClient->GetISteamInventory( hSteamUser, hSteamPipe, "STEAMINVENTORY_INTERFACE_V001" );
 	if ( !steamInventory )
 	{
 		printf( "steamInventory is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	ISteamUser017* steamUser = (ISteamUser017*)steamClient->GetISteamUser( hSteamUser, hSteamPipe, STEAMUSER_INTERFACE_VERSION_017 );
 	if ( !steamUser )
 	{
 		printf( "steamUser is null\n" );
-		shutdown();
+		shutdown( 1 );
 	}
 
 	clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
@@ -176,7 +211,7 @@ int main( int argc, char* argv[] )
 						if ( !clientUtils->GetAPICallResult( hRequestFreeLicenseForApps, &requestFreeLicenseResponse, sizeof( RequestFreeLicenseResponse_t ), RequestFreeLicenseResponse_t::k_iCallback, &bFailed ) )
 						{
 							printf( "GetAPICallResult failed\n" );
-							shutdown();
+							shutdown( 1 );
 						}
 						if ( requestFreeLicenseResponse.m_EResult == k_EResultOK && requestFreeLicenseResponse.m_nGrantedAppIds == 1 )
 						{
@@ -187,7 +222,7 @@ int main( int argc, char* argv[] )
 						else
 						{
 							printf( "Failed to add a free license. You do not own this game\n" );
-							shutdown();
+							shutdown( 1 );
 						}
 					}
 
@@ -338,14 +373,14 @@ int main( int argc, char* argv[] )
 					if ( !hSteamGameServerPipe || !hSteamGameServerUser )
 					{
 						printf( "CreateLocalUser failed (2)\n" );
-						shutdown();
+						shutdown( 1 );
 					}
 
 					steamGameServer = (ISteamGameServer012*)steamClient->GetISteamGameServer( hSteamGameServerUser, hSteamGameServerPipe, STEAMGAMESERVER_INTERFACE_VERSION_012 );
 					if ( !steamGameServer )
 					{
 						printf( "steamGameServer is null\n" );
-						shutdown();
+						shutdown( 1 );
 					}
 
 					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, 440, "3158168" );
@@ -441,6 +476,5 @@ int main( int argc, char* argv[] )
 		Sleep( 1000 );
 	}
 
-	shutdown();
 	return 0;
 }
