@@ -4,6 +4,14 @@
 #define SIDI_VERSION "2.03"
 
 CSteamAPILoader g_steamAPILoader;
+bool g_bKeepRunning = true;
+
+void ctrl_c_handler( int sig )
+{
+	signal(sig, SIG_IGN);
+	printf( "You pressed Ctrl+C\n" );
+	g_bKeepRunning = false;
+}
 
 void shutdown( int code )
 {
@@ -174,11 +182,13 @@ int main( int argc, char* argv[] )
 		shutdown( 1 );
 	}
 
+	signal( SIGINT, ctrl_c_handler );
+
 	clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
 
 	bool bPlayingGame = false;
 	bool bPlayingOnServer = false; // for games that require us to be connected to a server
-	while ( true )
+	while ( g_bKeepRunning )
 	{
 		// process steam user callbacks
 		CallbackMsg_t callbackMsg;
@@ -210,7 +220,8 @@ int main( int argc, char* argv[] )
 						if ( !clientUtils->GetAPICallResult( hRequestFreeLicenseForApps, &requestFreeLicenseResponse, sizeof( RequestFreeLicenseResponse_t ), RequestFreeLicenseResponse_t::k_iCallback, &bFailed ) )
 						{
 							printf( "[!] GetAPICallResult failed\n" );
-							shutdown( 1 );
+							g_bKeepRunning = false;
+							break;
 						}
 						if ( requestFreeLicenseResponse.m_EResult == k_EResultOK && requestFreeLicenseResponse.m_nGrantedAppIds == 1 )
 						{
@@ -221,7 +232,8 @@ int main( int argc, char* argv[] )
 						else
 						{
 							printf( "[!] Failed to add a free license. You do not own this game\n" );
-							shutdown( 1 );
+							g_bKeepRunning = false;
+							break;
 						}
 					}
 
@@ -251,6 +263,7 @@ int main( int argc, char* argv[] )
 						}
 						case k_EResultTwoFactorCodeMismatch:
 							printf( "[!] Invalid Steam Mobile Authenticator code\n" );
+							g_bKeepRunning = false;
 							break;
 						case k_EResultAccountLogonDeniedNeedTwoFactorCode:
 						{
@@ -289,6 +302,7 @@ int main( int argc, char* argv[] )
 							SetConsoleTextAttribute( hConsole, FOREGROUND_RED );
 							printf( "[!] Login failed (%d)\n", steamServerConnectFailure->m_eResult );
 							SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
+							g_bKeepRunning = false;
 							break;
 					}
 
@@ -372,14 +386,16 @@ int main( int argc, char* argv[] )
 					if ( !hSteamGameServerPipe || !hSteamGameServerUser )
 					{
 						printf( "CreateLocalUser failed (2)\n" );
-						shutdown( 1 );
+						break;
 					}
 
 					steamGameServer = (ISteamGameServer012*)steamClient->GetISteamGameServer( hSteamGameServerUser, hSteamGameServerPipe, STEAMGAMESERVER_INTERFACE_VERSION_012 );
 					if ( !steamGameServer )
 					{
 						printf( "steamGameServer is null\n" );
-						shutdown( 1 );
+						steamClient->ReleaseUser( hSteamGameServerPipe, hSteamGameServerUser );
+						steamClient->BReleaseSteamPipe( hSteamGameServerPipe );
+						break;
 					}
 
 					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, 440, "3158168" );
@@ -460,6 +476,14 @@ int main( int argc, char* argv[] )
 
 					Steam_FreeLastCallback( hSteamGameServerPipe );
 				}
+
+				if ( !g_bKeepRunning )
+				{
+					steamGameServer->LogOff();
+					steamClient->ReleaseUser( hSteamGameServerPipe, hSteamGameServerUser );
+					steamClient->BReleaseSteamPipe( hSteamGameServerPipe );
+					break;
+				}
 			}
 			else
 			{
@@ -474,5 +498,18 @@ int main( int argc, char* argv[] )
 		Sleep( 1000 );
 	}
 
+	if ( clientUser->BLoggedOn() )
+	{
+		clientFriends->SetPersonaState( k_EPersonaStateOffline );
+		clientUser->LogOff();
+		printf( "[*] Logged off\n" );
+	}
+
+	clientEngine->ReleaseUser( hSteamPipe, hSteamUser );
+	clientEngine->BReleaseSteamPipe( hSteamPipe );
+	clientEngine->BShutdownIfAllPipesClosed();
+
+	printf( "Press enter to exit...\n" );
+	getchar();
 	return 0;
 }

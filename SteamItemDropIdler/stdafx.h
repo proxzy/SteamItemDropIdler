@@ -4,6 +4,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
+#include <signal.h>
 
 #define STEAMWORKS_CLIENT_INTERFACES
 #include "Open Steamworks\Open Steamworks\Steamworks.h"
