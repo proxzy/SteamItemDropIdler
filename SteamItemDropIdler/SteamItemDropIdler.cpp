@@ -11,7 +11,6 @@ void shutdown()
 }
 
 int main( int argc, char* argv[] )
-//int CALLBACK WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
 {
 	HANDLE hConsole = GetStdHandle( STD_OUTPUT_HANDLE );
 
@@ -24,22 +23,23 @@ int main( int argc, char* argv[] )
 	AppId_t appID;
 	SteamItemDef_t dropListDefinition;
 
-	if ( __argc == 5 ) {
-		strcpy_s( steamAccountName, __argv[1] );
-		strcpy_s( steamAccountPassword, __argv[2] );
-		sscanf( __argv[3], "%d", &appID );
-		sscanf( __argv[4], "%d", &dropListDefinition );
+	if ( argc == 5 )
+	{
+		strcpy_s( steamAccountName, argv[1] );
+		strcpy_s( steamAccountPassword, argv[2] );
+		sscanf( argv[3], "%d", &appID );
+		sscanf( argv[4], "%d", &dropListDefinition );
 
-		memset( __argv[1], 0, strlen( __argv[1] ) );
-		memset( __argv[2], 0, strlen( __argv[2] ) );
+		memset( argv[1], 0, strlen( argv[1] ) );
+		memset( argv[2], 0, strlen( argv[2] ) );
 
 		printf( "Enter your Steam account name: %s\n", steamAccountName );
 		printf( "Enter your Steam account password: \n" );
 		printf( "Enter the AppID: %d\n", appID );
 		printf( "Enter the drop list definition: %d\n", dropListDefinition );
 	}
-	else {
-		//goto funcEnd;
+	else
+	{
 		printf( "Enter your Steam account name: " );
 		scanf( "%32s", steamAccountName );
 		getchar(); // skip newline
@@ -58,73 +58,84 @@ int main( int argc, char* argv[] )
 	}
 
 	char consoleTitle[256];
-	sprintf_s( consoleTitle, sizeof(consoleTitle), "Steam Item Drop Idler (%s)", steamAccountName );
+	sprintf_s( consoleTitle, sizeof( consoleTitle ), "Steam Item Drop Idler (%s)", steamAccountName );
 	SetConsoleTitleA( consoleTitle );
 
 	// load steam stuff
 	CreateInterfaceFn steam3Factory = g_steamAPILoader.GetSteam3Factory();
-	if ( !steam3Factory ) {
+	if ( !steam3Factory )
+	{
 		printf( "GetSteam3Factory failed\n" );
 		shutdown();
 	}
 
 	IClientEngine* clientEngine = (IClientEngine*)steam3Factory( CLIENTENGINE_INTERFACE_VERSION, NULL );
-	if ( !clientEngine ) {
+	if ( !clientEngine )
+	{
 		printf( "clientEngine is null\n" );
 		shutdown();
 	}
 
 	ISteamClient017* steamClient = (ISteamClient017*)steam3Factory( STEAMCLIENT_INTERFACE_VERSION_017, NULL );
-	if ( !steamClient ) {
+	if ( !steamClient )
+	{
 		printf( "steamClient is null\n" );
 		shutdown();
 	}
 
 	HSteamPipe hSteamPipe;
 	HSteamUser hSteamUser = clientEngine->CreateLocalUser( &hSteamPipe, k_EAccountTypeIndividual );
-	if ( !hSteamPipe || !hSteamUser ) {
+	if ( !hSteamPipe || !hSteamUser )
+	{
 		printf( "CreateLocalUser failed (1)\n" );
 		shutdown();
 	}
 
 	IClientBilling* clientBilling = clientEngine->GetIClientBilling( hSteamUser, hSteamPipe, CLIENTBILLING_INTERFACE_VERSION );
-	if ( !clientBilling ) {
+	if ( !clientBilling )
+	{
 		printf( "clientBilling is null\n" );
 		shutdown();
 	}
 
 	IClientFriends* clientFriends = clientEngine->GetIClientFriends( hSteamUser, hSteamPipe, CLIENTFRIENDS_INTERFACE_VERSION );
-	if ( !clientFriends ) {
+	if ( !clientFriends )
+	{
 		printf( "clientFriends is null\n" );
 		shutdown();
 	}
 
 	IClientUser* clientUser = clientEngine->GetIClientUser( hSteamUser, hSteamPipe, CLIENTUSER_INTERFACE_VERSION );
-	if ( !clientUser ) {
+	if ( !clientUser )
+	{
 		printf( "clientUser is null\n" );
 		shutdown();
 	}
 
 	IClientUtils* clientUtils = clientEngine->GetIClientUtils( hSteamPipe, CLIENTUTILS_INTERFACE_VERSION );
-	if ( !clientUtils ) {
+	if ( !clientUtils )
+	{
 		printf( "clientUtils is null\n" );
 		shutdown();
 	}
 
 	ISteamGameCoordinator001* steamGameCoordinator = (ISteamGameCoordinator001*)steamClient->GetISteamGenericInterface( hSteamUser, hSteamPipe, STEAMGAMECOORDINATOR_INTERFACE_VERSION_001 );
-	if ( !steamGameCoordinator ) {
+	if ( !steamGameCoordinator )
+	{
 		printf( "steamGameCoordinator is null\n" );
 		shutdown();
 	}
 
 	ISteamInventory001* steamInventory = (ISteamInventory001*)steamClient->GetISteamInventory( hSteamUser, hSteamPipe, "STEAMINVENTORY_INTERFACE_V001" );
-	if ( !steamInventory ) {
+	if ( !steamInventory )
+	{
 		printf( "steamInventory is null\n" );
 		shutdown();
 	}
 
 	ISteamUser017* steamUser = (ISteamUser017*)steamClient->GetISteamUser( hSteamUser, hSteamPipe, STEAMUSER_INTERFACE_VERSION_017 );
-	if ( !steamUser ) {
+	if ( !steamUser )
+	{
 		printf( "steamUser is null\n" );
 		shutdown();
 	}
@@ -141,129 +152,143 @@ int main( int argc, char* argv[] )
 		{
 			switch ( callbackMsg.m_iCallback )
 			{
-			case SteamServersConnected_t::k_iCallback:
-				clientFriends->SetPersonaState( k_EPersonaStateOnline );
+				case SteamServersConnected_t::k_iCallback:
+				{
+					clientFriends->SetPersonaState( k_EPersonaStateOnline );
 
-				if ( (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 692))(clientUser, appID) ) { // BIsSubscribedApp
-					clientUtils->SetAppIDForCurrentPipe( appID, true );
-					bPlayingGame = true;
-				}
-				else {
-					printf( "You are not subscribed to this app. Trying to add a free license...\n" );
-
-					SteamAPICall_t hRequestFreeLicenseForApps = (*(SteamAPICall_t( __thiscall** )(IClientBilling*, AppId_t*, int))(*(DWORD*)clientBilling + 24))(clientBilling, &appID, 1); // RequestFreeLicenseForApps
-					bool bFailed;
-					while ( !clientUtils->IsAPICallCompleted( hRequestFreeLicenseForApps, &bFailed ) )
-						Sleep( 1000 );
-
-					RequestFreeLicenseResponse_t requestFreeLicenseResponse;
-					if ( !clientUtils->GetAPICallResult( hRequestFreeLicenseForApps, &requestFreeLicenseResponse, sizeof( RequestFreeLicenseResponse_t ), RequestFreeLicenseResponse_t::k_iCallback, &bFailed ) ) {
-						printf( "GetAPICallResult failed\n" );
-						shutdown();
-					}
-					if ( requestFreeLicenseResponse.m_EResult == k_EResultOK && requestFreeLicenseResponse.m_nGrantedAppIds == 1 ) {
-						printf( "Added a free license\n" );
+					if ( (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 692))(clientUser, appID) ) // BIsSubscribedApp
+					{
 						clientUtils->SetAppIDForCurrentPipe( appID, true );
 						bPlayingGame = true;
 					}
-					else {
-						printf( "Failed to add a free license. You do not own this game\n" );
-						shutdown();
-					}
-				}
-
-				SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN );
-				printf( "Item drop idling is now in progress\n" );
-				SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
-				break;
-			case SteamServerConnectFailure_t::k_iCallback:
-			{
-				SteamServerConnectFailure_t* steamServerConnectFailure = (SteamServerConnectFailure_t*)callbackMsg.m_pubParam;
-				switch ( steamServerConnectFailure->m_eResult )
-				{
-				case k_EResultInvalidLoginAuthCode:
-					printf( "Invalid Steam Guard code\n" );
-				case k_EResultAccountLogonDenied:
-				{
-					char steamGuardCode[33];
-					printf( "Enter the Steam Guard code: " );
-					scanf( "%32s", steamGuardCode );
-					getchar();
-
-					// this is Set2ndFactorAuthCode, however I have to do this because IClientUser.h is outdated
-					(*(void( __thiscall** )(IClientUser*, const char*, bool))(*(DWORD*)clientUser + 676))(clientUser, steamGuardCode, false);
-					clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
-					break;
-				}
-				case k_EResultTwoFactorCodeMismatch:
-					printf( "Invalid Steam Mobile Authenticator code\n" );
-				case k_EResultAccountLogonDeniedNeedTwoFactorCode:
-				{
-					char steamMobileAuthenticatorCode[33];
-					uint8_t secret[20] = {0};
-					int ret = getSharedSecret(steamAccountName, secret);
-					switch (ret)
+					else
 					{
-						case 1:
-							printf("Secret file not found! Can not generate 2FA code.\n");
-							break;
-						case 2:
-							printf("Secret file is invalid. Can not generate 2FA code.\n");
-							break;
-						case 3:
-							printf("Secret is invalid. Can not generate 2FA code.\n");
-							break;
-						default:
-							get2FACode(secret, steamMobileAuthenticatorCode);
-							break;
-					}
-					if (ret > 0)
-					{
-						printf( "Enter the Steam Mobile Authenticator code: " );
-						scanf( "%32s", steamMobileAuthenticatorCode );
-						getchar();
+						printf( "You are not subscribed to this app. Trying to add a free license...\n" );
+
+						SteamAPICall_t hRequestFreeLicenseForApps = (*(SteamAPICall_t( __thiscall** )(IClientBilling*, AppId_t*, int))(*(DWORD*)clientBilling + 24))(clientBilling, &appID, 1); // RequestFreeLicenseForApps
+						bool bFailed;
+						while ( !clientUtils->IsAPICallCompleted( hRequestFreeLicenseForApps, &bFailed ) )
+						{
+							Sleep( 100 );
+						}
+
+						RequestFreeLicenseResponse_t requestFreeLicenseResponse;
+						if ( !clientUtils->GetAPICallResult( hRequestFreeLicenseForApps, &requestFreeLicenseResponse, sizeof( RequestFreeLicenseResponse_t ), RequestFreeLicenseResponse_t::k_iCallback, &bFailed ) )
+						{
+							printf( "GetAPICallResult failed\n" );
+							shutdown();
+						}
+						if ( requestFreeLicenseResponse.m_EResult == k_EResultOK && requestFreeLicenseResponse.m_nGrantedAppIds == 1 )
+						{
+							printf( "Added a free license\n" );
+							clientUtils->SetAppIDForCurrentPipe( appID, true );
+							bPlayingGame = true;
+						}
+						else
+						{
+							printf( "Failed to add a free license. You do not own this game\n" );
+							shutdown();
+						}
 					}
 
-					(*(void( __thiscall** )(IClientUser*, const char*))(*(DWORD*)clientUser + 196))(clientUser, steamMobileAuthenticatorCode); // SetTwoFactorCode
-					clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
-					break;
-				}
-				default:
-					SetConsoleTextAttribute( hConsole, FOREGROUND_RED );
-					printf( "Login failed (%d)\n", steamServerConnectFailure->m_eResult );
+					SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN );
+					printf( "Item drop idling is now in progress\n" );
 					SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 					break;
 				}
+				case SteamServerConnectFailure_t::k_iCallback:
+				{
+					SteamServerConnectFailure_t* steamServerConnectFailure = (SteamServerConnectFailure_t*)callbackMsg.m_pubParam;
+					switch ( steamServerConnectFailure->m_eResult )
+					{
+						case k_EResultInvalidLoginAuthCode:
+							printf( "Invalid Steam Guard code\n" );
+						case k_EResultAccountLogonDenied:
+						{
+							char steamGuardCode[33];
+							printf( "Enter the Steam Guard code: " );
+							scanf( "%32s", steamGuardCode );
+							getchar();
 
-				bPlayingGame = false;
-				bPlayingOnServer = false;
-				break;
-			}
-			case SteamServersDisconnected_t::k_iCallback:
-			{
-				SteamServersDisconnected_t* steamServersDisconnected = (SteamServersDisconnected_t*)callbackMsg.m_pubParam;
-				printf( "Disconnected from steam servers (%d)\n", steamServersDisconnected->m_eResult );
+							// this is Set2ndFactorAuthCode, however I have to do this because IClientUser.h is outdated
+							(*(void( __thiscall** )(IClientUser*, const char*, bool))(*(DWORD*)clientUser + 676))(clientUser, steamGuardCode, false);
+							clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
+							break;
+						}
+						case k_EResultTwoFactorCodeMismatch:
+							printf( "Invalid Steam Mobile Authenticator code\n" );
+						case k_EResultAccountLogonDeniedNeedTwoFactorCode:
+						{
+							char steamMobileAuthenticatorCode[33];
+							uint8_t secret[20] = {0};
+							int ret = getSharedSecret(steamAccountName, secret);
 
-				bPlayingGame = false;
-				bPlayingOnServer = false;
-				break;
-			}
-			/*default:
-				printf( "User callback: %d\n", callbackMsg.m_iCallback );
-				break;*/
+							switch ( ret )
+							{
+								case 1:
+									printf( "Secret file not found! Can not generate 2FA code.\n" );
+									break;
+								case 2:
+									printf( "Secret file is invalid. Can not generate 2FA code.\n" );
+									break;
+								case 3:
+									printf( "Secret is invalid. Can not generate 2FA code.\n" );
+									break;
+								default:
+									get2FACode( secret, steamMobileAuthenticatorCode );
+									break;
+							}
+
+							if ( ret > 0 )
+							{
+								printf( "Enter the Steam Mobile Authenticator code: " );
+								scanf( "%32s", steamMobileAuthenticatorCode );
+								getchar();
+							}
+
+							(*(void( __thiscall** )(IClientUser*, const char*))(*(DWORD*)clientUser + 196))(clientUser, steamMobileAuthenticatorCode); // SetTwoFactorCode
+							clientUser->LogOnWithPassword( false, steamAccountName, steamAccountPassword );
+							break;
+						}
+						default:
+							SetConsoleTextAttribute( hConsole, FOREGROUND_RED );
+							printf( "Login failed (%d)\n", steamServerConnectFailure->m_eResult );
+							SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
+							break;
+					}
+
+					bPlayingGame = false;
+					bPlayingOnServer = false;
+					break;
+				}
+				case SteamServersDisconnected_t::k_iCallback:
+				{
+					SteamServersDisconnected_t* steamServersDisconnected = (SteamServersDisconnected_t*)callbackMsg.m_pubParam;
+					printf( "Disconnected from steam servers (%d)\n", steamServersDisconnected->m_eResult );
+
+					bPlayingGame = false;
+					bPlayingOnServer = false;
+					break;
+				}
+				/*default:
+					printf( "User callback: %d\n", callbackMsg.m_iCallback );
+					break;*/
 			}
 
 			Steam_FreeLastCallback( hSteamPipe );
 		}
 
 		// do the actual item drop idling if we're "playing" the game
-		if ( bPlayingGame ) {
-			if ( appID == 440 ) {
+		if ( bPlayingGame )
+		{
+			if ( appID == 440 )
+			{
 				static bool bHelloMsgSent = false;
 				static bool bGameServerInited = false;
 
 				// do game coordinator stuff
-				if ( !bHelloMsgSent ) {
+				if ( !bHelloMsgSent )
+				{
 					// k_EMsgGCClientHello
 					unsigned char response[] = { 0xA6, 0x0F, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x08, 0x98, 0xE1, 0xC0, 0x01 };
 					steamGameCoordinator->SendMessage( 0x80000FA6, response, sizeof( response ) );
@@ -273,15 +298,19 @@ int main( int argc, char* argv[] )
 				}
 
 				uint32 msgSize;
-				while ( steamGameCoordinator->IsMessageAvailable( &msgSize ) ) {
+				while ( steamGameCoordinator->IsMessageAvailable( &msgSize ) )
+				{
 					uint32 msgType;
 					unsigned char* msg = new unsigned char[msgSize];
-					if ( steamGameCoordinator->RetrieveMessage( &msgType, msg, msgSize, &msgSize ) == k_EGCResultOK ) {
+					if ( steamGameCoordinator->RetrieveMessage( &msgType, msg, msgSize, &msgSize ) == k_EGCResultOK )
+					{
 						printf( "Retrieved message of type 0x%X from game coordinator\n", msgType );
-						if ( msgType == 0x80000FA4 ) { // k_EMsgGCClientWelcome
+						if ( msgType == 0x80000FA4 ) // k_EMsgGCClientWelcome
+						{
 							printf( "Got welcome msg from game coordinator\n" );
 						}
-						else if ( msgType == 0x8000001B ) { // k_ESOMsg_CacheSubscriptionCheck
+						else if ( msgType == 0x8000001B ) // k_ESOMsg_CacheSubscriptionCheck
+						{
 							// k_ESOMsg_CacheSubscriptionRefresh
 							unsigned char response[] = { 0x1C, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 							*(CSteamID*)&response[9] = steamUser->GetSteamID();
@@ -289,7 +318,8 @@ int main( int argc, char* argv[] )
 							printf( "Sent response to game coordinator\n" );
 						}
 					}
-					else {
+					else
+					{
 						printf( "Failed to retrieve message from game coordinator\n" );
 					}
 					delete[] msg;
@@ -299,17 +329,20 @@ int main( int argc, char* argv[] )
 				static HSteamPipe hSteamGameServerPipe;
 				static HSteamUser hSteamGameServerUser;
 				static ISteamGameServer012* steamGameServer;
-				if ( !bGameServerInited ) {
+				if ( !bGameServerInited )
+				{
 					// called by SteamGameServer_Init. needed for games that require us to be connected to a server
 					steamClient->SetLocalIPBinding( 0, 26901 );
 					hSteamGameServerUser = steamClient->CreateLocalUser( &hSteamGameServerPipe, k_EAccountTypeGameServer );
-					if ( !hSteamGameServerPipe || !hSteamGameServerUser ) {
+					if ( !hSteamGameServerPipe || !hSteamGameServerUser )
+					{
 						printf( "CreateLocalUser failed (2)\n" );
 						shutdown();
 					}
 
 					steamGameServer = (ISteamGameServer012*)steamClient->GetISteamGameServer( hSteamGameServerUser, hSteamGameServerPipe, STEAMGAMESERVER_INTERFACE_VERSION_012 );
-					if ( !steamGameServer ) {
+					if ( !steamGameServer )
+					{
 						printf( "steamGameServer is null\n" );
 						shutdown();
 					}
@@ -335,9 +368,11 @@ int main( int argc, char* argv[] )
 					bGameServerInited = true;
 				}
 
-				if ( !bPlayingOnServer ) {
+				if ( !bPlayingOnServer )
+				{
 					static HAuthTicket hAuthTicket = 0;
-					if ( hAuthTicket ) {
+					if ( hAuthTicket )
+					{
 						steamUser->CancelAuthTicket( hAuthTicket );
 						steamGameServer->EndAuthSession( steamUser->GetSteamID() );
 						hAuthTicket = 0;
@@ -346,14 +381,20 @@ int main( int argc, char* argv[] )
 					unsigned char ticket[1024];
 					uint32 ticketSize;
 					hAuthTicket = steamUser->GetAuthSessionTicket( ticket, sizeof( ticket ), &ticketSize );
-					if ( hAuthTicket != k_HAuthTicketInvalid ) {
+					if ( hAuthTicket != k_HAuthTicketInvalid )
+					{
 						EBeginAuthSessionResult beginAuthSessionResult = steamGameServer->BeginAuthSession( ticket, ticketSize, steamUser->GetSteamID() );
 						if ( beginAuthSessionResult == k_EBeginAuthSessionResultOK )
+						{
 							bPlayingOnServer = true;
+						}
 						else
+						{
 							printf( "BeginAuthSession failed (%d)\n", beginAuthSessionResult );
+						}
 					}
-					else {
+					else
+					{
 						printf( "GetAuthSessionTicket failed\n" );
 					}
 				}
@@ -363,28 +404,31 @@ int main( int argc, char* argv[] )
 				{
 					switch ( callbackMsg.m_iCallback )
 					{
-					case ValidateAuthTicketResponse_t::k_iCallback:
-					{
-						ValidateAuthTicketResponse_t* validateAuthTicketResponse = (ValidateAuthTicketResponse_t*)callbackMsg.m_pubParam;
-						if ( validateAuthTicketResponse->m_eAuthSessionResponse == k_EAuthSessionResponseOK ) {
-							printf( "BeginAuthSession callback ok\n" );
-							//steamGameServer->BUpdateUserData( validateAuthTicketResponse->m_SteamID, "Player", 0 );
+						case ValidateAuthTicketResponse_t::k_iCallback:
+						{
+							ValidateAuthTicketResponse_t* validateAuthTicketResponse = (ValidateAuthTicketResponse_t*)callbackMsg.m_pubParam;
+							if ( validateAuthTicketResponse->m_eAuthSessionResponse == k_EAuthSessionResponseOK )
+							{
+								printf( "BeginAuthSession callback ok\n" );
+								//steamGameServer->BUpdateUserData( validateAuthTicketResponse->m_SteamID, "Player", 0 );
+							}
+							else
+							{
+								printf( "BeginAuthSession callback failed (%d)\n", validateAuthTicketResponse->m_eAuthSessionResponse );
+								bPlayingOnServer = false;
+							}
+							break;
 						}
-						else {
-							printf( "BeginAuthSession callback failed (%d)\n", validateAuthTicketResponse->m_eAuthSessionResponse );
-							bPlayingOnServer = false;
-						}
-						break;
-					}
-					/*default:
-						printf( "Game server callback: %d\n", callbackMsg.m_iCallback );
-						break;*/
+						/*default:
+							printf( "Game server callback: %d\n", callbackMsg.m_iCallback );
+							break;*/
 					}
 
 					Steam_FreeLastCallback( hSteamGameServerPipe );
 				}
 			}
-			else {
+			else
+			{
 				steamInventory->SendItemDropHeartbeat();
 
 				SteamInventoryResult_t steamInventoryResult;
