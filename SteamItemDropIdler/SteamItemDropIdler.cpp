@@ -217,6 +217,7 @@ int main( int argc, char* argv[] )
 						}
 						case k_EResultTwoFactorCodeMismatch:
 							printf( "Invalid Steam Mobile Authenticator code\n" );
+							break;
 						case k_EResultAccountLogonDeniedNeedTwoFactorCode:
 						{
 							char steamMobileAuthenticatorCode[33];
