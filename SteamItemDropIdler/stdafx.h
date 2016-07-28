@@ -7,4 +7,9 @@
 
 #define STEAMWORKS_CLIENT_INTERFACES
 #include "Open Steamworks\Open Steamworks\Steamworks.h"
-#pragma comment( lib, "Open Steamworks\\Resources\\Libs\\Win32\\steamclient.lib" )
+
+#include "token_generator\token_generator.h"
+
+#ifdef _MSC_VER
+	#pragma comment( lib, "Open Steamworks\\Resources\\Libs\\Win32\\steamclient.lib" )
+#endif

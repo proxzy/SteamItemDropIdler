@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "token_generator/token_generator.h"
 
 #define SIDI_NAME "Steam Item Drop Idler"
 #define SIDI_VERSION "2.03"
@@ -198,7 +197,7 @@ int main( int argc, char* argv[] )
 					}
 					else
 					{
-						printf( "You are not subscribed to this app. Trying to add a free license...\n" );
+						printf( "[*] You are not subscribed to this app. Trying to add a free license...\n" );
 
 						SteamAPICall_t hRequestFreeLicenseForApps = (*(SteamAPICall_t( __thiscall** )(IClientBilling*, AppId_t*, int))(*(DWORD*)clientBilling + 24))(clientBilling, &appID, 1); // RequestFreeLicenseForApps
 						bool bFailed;
@@ -210,18 +209,18 @@ int main( int argc, char* argv[] )
 						RequestFreeLicenseResponse_t requestFreeLicenseResponse;
 						if ( !clientUtils->GetAPICallResult( hRequestFreeLicenseForApps, &requestFreeLicenseResponse, sizeof( RequestFreeLicenseResponse_t ), RequestFreeLicenseResponse_t::k_iCallback, &bFailed ) )
 						{
-							printf( "GetAPICallResult failed\n" );
+							printf( "[!] GetAPICallResult failed\n" );
 							shutdown( 1 );
 						}
 						if ( requestFreeLicenseResponse.m_EResult == k_EResultOK && requestFreeLicenseResponse.m_nGrantedAppIds == 1 )
 						{
-							printf( "Added a free license\n" );
+							printf( "[*] Added a free license\n" );
 							clientUtils->SetAppIDForCurrentPipe( appID, true );
 							bPlayingGame = true;
 						}
 						else
 						{
-							printf( "Failed to add a free license. You do not own this game\n" );
+							printf( "[!] Failed to add a free license. You do not own this game\n" );
 							shutdown( 1 );
 						}
 					}
@@ -237,7 +236,7 @@ int main( int argc, char* argv[] )
 					switch ( steamServerConnectFailure->m_eResult )
 					{
 						case k_EResultInvalidLoginAuthCode:
-							printf( "Invalid Steam Guard code\n" );
+							printf( "[!] Invalid Steam Guard code\n" );
 						case k_EResultAccountLogonDenied:
 						{
 							char steamGuardCode[33];
@@ -251,7 +250,7 @@ int main( int argc, char* argv[] )
 							break;
 						}
 						case k_EResultTwoFactorCodeMismatch:
-							printf( "Invalid Steam Mobile Authenticator code\n" );
+							printf( "[!] Invalid Steam Mobile Authenticator code\n" );
 							break;
 						case k_EResultAccountLogonDeniedNeedTwoFactorCode:
 						{
@@ -288,7 +287,7 @@ int main( int argc, char* argv[] )
 						}
 						default:
 							SetConsoleTextAttribute( hConsole, FOREGROUND_RED );
-							printf( "Login failed (%d)\n", steamServerConnectFailure->m_eResult );
+							printf( "[!] Login failed (%d)\n", steamServerConnectFailure->m_eResult );
 							SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 							break;
 					}
@@ -300,7 +299,7 @@ int main( int argc, char* argv[] )
 				case SteamServersDisconnected_t::k_iCallback:
 				{
 					SteamServersDisconnected_t* steamServersDisconnected = (SteamServersDisconnected_t*)callbackMsg.m_pubParam;
-					printf( "Disconnected from steam servers (%d)\n", steamServersDisconnected->m_eResult );
+					printf( "[!] Disconnected from steam servers (%d)\n", steamServersDisconnected->m_eResult );
 
 					bPlayingGame = false;
 					bPlayingOnServer = false;
@@ -328,7 +327,7 @@ int main( int argc, char* argv[] )
 					// k_EMsgGCClientHello
 					unsigned char response[] = { 0xA6, 0x0F, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x08, 0x98, 0xE1, 0xC0, 0x01 };
 					steamGameCoordinator->SendMessage( 0x80000FA6, response, sizeof( response ) );
-					printf( "Sent hello msg to game coordinator\n" );
+					printf( "[*] Sent hello msg to game coordinator\n" );
 
 					bHelloMsgSent = true;
 				}
@@ -340,10 +339,10 @@ int main( int argc, char* argv[] )
 					unsigned char* msg = new unsigned char[msgSize];
 					if ( steamGameCoordinator->RetrieveMessage( &msgType, msg, msgSize, &msgSize ) == k_EGCResultOK )
 					{
-						printf( "Retrieved message of type 0x%X from game coordinator\n", msgType );
+						printf( "[*] Retrieved message of type 0x%X from game coordinator (size %d)\n", msgType, msgSize );
 						if ( msgType == 0x80000FA4 ) // k_EMsgGCClientWelcome
 						{
-							printf( "Got welcome msg from game coordinator\n" );
+							printf( "[*] Got welcome msg from game coordinator\n" );
 						}
 						else if ( msgType == 0x8000001B ) // k_ESOMsg_CacheSubscriptionCheck
 						{
@@ -351,12 +350,12 @@ int main( int argc, char* argv[] )
 							unsigned char response[] = { 0x1C, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 							*(CSteamID*)&response[9] = steamUser->GetSteamID();
 							steamGameCoordinator->SendMessage( 0x8000001C, response, sizeof( response ) );
-							printf( "Sent response to game coordinator\n" );
+							printf( "[*] Sent response to game coordinator\n" );
 						}
 					}
 					else
 					{
-						printf( "Failed to retrieve message from game coordinator\n" );
+						printf( "[!] Failed to retrieve message from game coordinator\n" );
 					}
 					delete[] msg;
 				}
@@ -399,7 +398,6 @@ int main( int argc, char* argv[] )
 					steamGameServer->SetKeyValue( "tf_gamemode_ctf", "1" );
 					steamGameServer->SetKeyValue( "sv_tags", "ctf" );
 					steamGameServer->SetGameTags( "ctf" );
-					//steamGameServer->EnableHeartbeats( true );
 
 					bGameServerInited = true;
 				}
@@ -426,12 +424,12 @@ int main( int argc, char* argv[] )
 						}
 						else
 						{
-							printf( "BeginAuthSession failed (%d)\n", beginAuthSessionResult );
+							printf( "[!] BeginAuthSession failed (%d)\n", beginAuthSessionResult );
 						}
 					}
 					else
 					{
-						printf( "GetAuthSessionTicket failed\n" );
+						printf( "[!] GetAuthSessionTicket failed\n" );
 					}
 				}
 
@@ -445,12 +443,12 @@ int main( int argc, char* argv[] )
 							ValidateAuthTicketResponse_t* validateAuthTicketResponse = (ValidateAuthTicketResponse_t*)callbackMsg.m_pubParam;
 							if ( validateAuthTicketResponse->m_eAuthSessionResponse == k_EAuthSessionResponseOK )
 							{
-								printf( "BeginAuthSession callback ok\n" );
+								printf( "[*] BeginAuthSession callback ok\n" );
 								//steamGameServer->BUpdateUserData( validateAuthTicketResponse->m_SteamID, "Player", 0 );
 							}
 							else
 							{
-								printf( "BeginAuthSession callback failed (%d)\n", validateAuthTicketResponse->m_eAuthSessionResponse );
+								printf( "[!] BeginAuthSession callback failed (%d)\n", validateAuthTicketResponse->m_eAuthSessionResponse );
 								bPlayingOnServer = false;
 							}
 							break;
