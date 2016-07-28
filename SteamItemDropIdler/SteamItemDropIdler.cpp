@@ -198,6 +198,27 @@ int main( int argc, char* argv[] )
 			{
 				case SteamServersConnected_t::k_iCallback:
 				{
+					printf( "[*] Logged in\n" );
+
+					// ToDo: reverse ParentalSettings callback
+					if ( (*(bool( __thiscall** )(IClientUser*))(*(DWORD*)clientUser + 764))(clientUser) // BIsParentalLockEnabled()
+					  && (*(bool( __thiscall** )(IClientUser*))(*(DWORD*)clientUser + 768))(clientUser) ) // BIsParentalLockLocked()
+					{
+						if ( (*(bool( __thiscall** )(IClientUser*, EParentalFeature))(*(DWORD*)clientUser + 796))(clientUser, k_EParentalFeatureLibrary) // BIsFeatureBlocked()
+						  && (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 780))(clientUser, appID) ) // BIsAppBlocked()
+						{
+							char parentalPinCode[5];
+							printf( "[!] Parental Lock Enabled\n" );
+							printf( "Enter the Parental Pin code (4 digit): " );
+							fgets( parentalPinCode, sizeof( parentalPinCode ), stdin );
+							fflush( stdin );
+							if ( !(*(bool( __thiscall** )(IClientUser*, const char *))(*(DWORD*)clientUser + 760))(clientUser, parentalPinCode) ) // UnlockParentalLock()
+							{
+								printf( "[!] UnlockParentalLock - fail\n" );
+							}
+						}
+					}
+
 					clientFriends->SetPersonaState( k_EPersonaStateOnline );
 
 					if ( (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 692))(clientUser, appID) ) // BIsSubscribedApp
