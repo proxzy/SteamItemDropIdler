@@ -278,8 +278,10 @@ int main( int argc, char* argv[] )
 						}
 					}
 
+					time_t uTime = time( NULL );
+					tm* localtm = localtime( &uTime );
 					SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN );
-					printf( "Item drop idling is now in progress\n" );
+					printf( "[%02d:%02d:%02d] Item drop idling is now in progress\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec );
 					SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 					break;
 				}
@@ -440,7 +442,11 @@ int main( int argc, char* argv[] )
 								ptr += 1;
 								ReadProtoNumber( ptr, &def_index, 4 );
 
-								printf( "NEW ITEM: ItemID %llu, Def %u\n", item_id, def_index );
+								time_t uTime = time( NULL );
+								tm* localtm = localtime( &uTime );
+								SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE );
+								printf( "[%02d:%02d:%02d] NEW ITEM: ItemID %llu, Def %u\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, item_id, def_index );
+								SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 							}
 						}
 					}
@@ -590,10 +596,14 @@ int main( int argc, char* argv[] )
 							SteamItemDetails_t *details = new SteamItemDetails_t[itemsCount];
 							if ( steamInventory->GetResultItems( steamInventoryResult, details, &itemsCount ) )
 							{
+								time_t uTime = time( NULL );
+								tm* localtm = localtime( &uTime );
+								SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE );
 								for ( uint32 idx = 0; idx < itemsCount; ++idx )
 								{
-									printf( "NEW ITEM: ItemID %llu, Def %d\n", details[idx].m_itemId, details[idx].m_iDefinition );
+									printf( "[%02d:%02d:%02d] NEW ITEM: ItemID %llu, Def %d\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, details[idx].m_itemId, details[idx].m_iDefinition );
 								}
+								SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 							}
 							delete[] details;
 						}
