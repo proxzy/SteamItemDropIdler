@@ -227,6 +227,14 @@ int main( int argc, char* argv[] )
 							}
 						}
 					}
+					break;
+				}
+				case LicensesUpdated_t::k_iCallback:
+				{
+					if (appID == 0)
+					{
+						break;
+					}
 
 					if ( (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 692))(clientUser, appID) ) // BIsSubscribedApp
 					{
