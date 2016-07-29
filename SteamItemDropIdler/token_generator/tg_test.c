@@ -1,4 +1,4 @@
-// gcc -Wall -D__LITTLE_ENDIAN__ -lws2_32 tg_test.c base64.c sha1.c token_generator.c -o tg_test
+// gcc -Wall -D__LITTLE_ENDIAN__ tg_test.c base64.c sha1.c token_generator.c -o tg_test
 // ./tg_test
 // Enter: test
 
@@ -10,25 +10,31 @@
 int main(void)
 {
 	uint8_t secret[20] = {0};
-	char steamAccountName[33];
-	char twoFactorCode[6];
+	char steamAccountName[65];
+	char twoFactorCode[6] = {0};
 	int ret;
 
 	printf("Enter your Steam account name: ");
-	scanf("%32s", steamAccountName);
-	getchar();
+	fgets(steamAccountName, sizeof(steamAccountName), stdin);
+	if ( steamAccountName[strlen( steamAccountName ) - 1] == '\n' ) {
+		steamAccountName[strlen( steamAccountName ) - 1] = '\0';
+	}
+	fflush(stdin);
 
-	ret = getSharedSecret(steamAccountName, secret);
+	ret = getSharedSecret(steamAccountName, secret, sizeof(secret));
 	switch (ret)
 	{
 		case 1:
-			printf("Secret file not found! Can not generate 2FA code.\n");
+			printf("Secret file not found! Cannot generate 2FA code.\n");
 			break;
 		case 2:
-			printf("Secret file is invalid. Can not generate 2FA code.\n");
+			printf("Secret file is invalid. Cannot generate 2FA code.\n");
 			break;
 		case 3:
-			printf("Secret is invalid. Can not generate 2FA code.\n");
+			printf("Secret is invalid. Cannot generate 2FA code.\n");
+			break;
+		case -1:
+			printf("Hey developer, you suck!\n");
 			break;
 		default:
 			// OK
@@ -41,7 +47,7 @@ int main(void)
 
 		while (1)
 		{
-			get2FACode(secret, twoFactorCode);
+			get2FACode(secret, twoFactorCode, sizeof(twoFactorCode));
 
 			printf("\n2FA code : %s\n", twoFactorCode);
 			printf("Expiring in %ld seconds\n", 30 - time(NULL) % 30);

@@ -310,31 +310,31 @@ int main( int argc, char* argv[] )
 							break;
 						case k_EResultAccountLogonDeniedNeedTwoFactorCode:
 						{
-							char steamMobileAuthenticatorCode[33];
+							char steamMobileAuthenticatorCode[6];
 							uint8_t secret[20] = {0};
-							int ret = getSharedSecret(steamAccountName, secret);
+							int ret = getSharedSecret( steamAccountName, secret, sizeof( secret ) );
 
 							switch ( ret )
 							{
 								case 1:
-									printf( "Secret file not found! Can not generate 2FA code.\n" );
+									printf( "Secret file not found! Cannot generate 2FA code.\n" );
 									break;
 								case 2:
-									printf( "Secret file is invalid. Can not generate 2FA code.\n" );
+									printf( "Secret file is invalid. Cannot generate 2FA code.\n" );
 									break;
 								case 3:
-									printf( "Secret is invalid. Can not generate 2FA code.\n" );
+									printf( "Secret is invalid. Cannot generate 2FA code.\n" );
 									break;
-								default:
-									get2FACode( secret, steamMobileAuthenticatorCode );
+								case 0:
+									ret = get2FACode( secret, steamMobileAuthenticatorCode, sizeof( steamMobileAuthenticatorCode ) );
 									break;
 							}
 
-							if ( ret > 0 )
+							if ( ret != 0 )
 							{
 								printf( "Enter the Steam Mobile Authenticator code: " );
-								scanf( "%32s", steamMobileAuthenticatorCode );
-								getchar();
+								fgets( steamMobileAuthenticatorCode, sizeof( steamMobileAuthenticatorCode ), stdin );
+								fflush( stdin );
 							}
 
 							(*(void( __thiscall** )(IClientUser*, const char*))(*(DWORD*)clientUser + 196))(clientUser, steamMobileAuthenticatorCode); // SetTwoFactorCode
