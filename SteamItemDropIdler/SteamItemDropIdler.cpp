@@ -192,6 +192,13 @@ int main( int argc, char* argv[] )
 
 	while ( g_bKeepRunning )
 	{
+		if ( clientUser->BLoggedOn() && clientFriends->GetPersonaState() != k_EPersonaStateOnline )
+		{
+			// Spam happens
+			// printf( "[*] Going online...\n" );
+			clientFriends->SetPersonaState( k_EPersonaStateOnline );
+		}
+
 		// process steam user callbacks
 		CallbackMsg_t callbackMsg;
 		while ( Steam_BGetCallback( hSteamPipe, &callbackMsg ) )
@@ -220,8 +227,6 @@ int main( int argc, char* argv[] )
 							}
 						}
 					}
-
-					clientFriends->SetPersonaState( k_EPersonaStateOnline );
 
 					if ( (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 692))(clientUser, appID) ) // BIsSubscribedApp
 					{
