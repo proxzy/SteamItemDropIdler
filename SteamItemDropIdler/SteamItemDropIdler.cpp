@@ -3,6 +3,11 @@
 #define SIDI_NAME "Steam Item Drop Idler"
 #define SIDI_VERSION "2.03"
 
+const uint32 k_unGCProtoBufFlag = 0x80000000;
+
+const int k_EMsgGCClientWelcome = 4004;
+const int k_EMsgGCClientHello = 4006;
+
 CSteamAPILoader g_steamAPILoader;
 bool g_bKeepRunning = true;
 
@@ -355,9 +360,17 @@ int main( int argc, char* argv[] )
 					bPlayingOnServer = false;
 					break;
 				}
-				/*default:
-					printf( "User callback: %d\n", callbackMsg.m_iCallback );
-					break;*/
+				/*
+				case GCMessageAvailable_t::k_iCallback:
+				{
+					GCMessageAvailable_t *GCMessageAvailable = (GCMessageAvailable_t *)callbackMsg.m_pubParam;
+					printf( "[*] Game Coordinator message is available (size = %d).\n", GCMessageAvailable->m_nMessageSize);
+					break;
+				}
+				default:
+					printf( "[-] User callback: %d (size %d)\n", callbackMsg.m_iCallback, callbackMsg.m_cubParam );
+					break;
+				*/
 			}
 
 			Steam_FreeLastCallback( hSteamPipe );
@@ -366,7 +379,7 @@ int main( int argc, char* argv[] )
 		// do the actual item drop idling if we're "playing" the game
 		if ( bPlayingGame )
 		{
-			if ( appID == 440 )
+			if ( appID == k_nGameIDTF2 )
 			{
 				static bool bHelloMsgSent = false;
 				static bool bGameServerInited = false;
@@ -374,9 +387,12 @@ int main( int argc, char* argv[] )
 				// do game coordinator stuff
 				if ( !bHelloMsgSent )
 				{
-					// k_EMsgGCClientHello
-					unsigned char response[] = { 0xA6, 0x0F, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x08, 0x98, 0xE1, 0xC0, 0x01 };
-					steamGameCoordinator->SendMessage( 0x80000FA6, response, sizeof( response ) );
+					unsigned char response[] = {
+						0xA6, 0x0F, 0x00, 0x80,      // GC MsgID (k_EMsgGCClientHello)
+						0x00, 0x00, 0x00, 0x00,      // header length (0)
+						0x08, 0x98, 0xE1, 0xC0, 0x01 // protobuf payload (client version)
+					};
+					steamGameCoordinator->SendMessage( k_EMsgGCClientHello | k_unGCProtoBufFlag, response, sizeof( response ) );
 					printf( "[*] Sent hello msg to game coordinator\n" );
 
 					bHelloMsgSent = true;
@@ -387,21 +403,35 @@ int main( int argc, char* argv[] )
 				{
 					uint32 msgType;
 					unsigned char* msg = new unsigned char[msgSize];
-					if ( steamGameCoordinator->RetrieveMessage( &msgType, msg, msgSize, &msgSize ) == k_EGCResultOK )
+					EGCResults gcResult = steamGameCoordinator->RetrieveMessage( &msgType, msg, msgSize, &msgSize );
+					if ( gcResult == k_EGCResultOK )
 					{
 						printf( "[*] Retrieved message of type 0x%X from game coordinator (size %d)\n", msgType, msgSize );
-						if ( msgType == 0x80000FA4 ) // k_EMsgGCClientWelcome
+						if ( ( msgType & ~k_unGCProtoBufFlag ) == k_EMsgGCClientWelcome )
 						{
 							printf( "[*] Got welcome msg from game coordinator\n" );
 						}
-						else if ( msgType == 0x8000001B ) // k_ESOMsg_CacheSubscriptionCheck
+						else if ( ( msgType & ~k_unGCProtoBufFlag ) == k_ESOMsg_CacheSubscriptionCheck )
 						{
-							// k_ESOMsg_CacheSubscriptionRefresh
-							unsigned char response[] = { 0x1C, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-							*(CSteamID*)&response[9] = steamUser->GetSteamID();
-							steamGameCoordinator->SendMessage( 0x8000001C, response, sizeof( response ) );
+							unsigned char response[] = {
+								0x1C, 0x00, 0x00, 0x80,                              // GC MsgID (k_ESOMsg_CacheSubscriptionRefresh)
+								0x00, 0x00, 0x00, 0x00,                              // header length (0)
+								0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // protobuf payload (SteamID)
+							};
+							*(uint64*)(response + 9) = steamUser->GetSteamID().ConvertToUint64(); // make compiler happy
+							steamGameCoordinator->SendMessage( k_ESOMsg_CacheSubscriptionRefresh | k_unGCProtoBufFlag, response, sizeof( response ) );
 							printf( "[*] Sent response to game coordinator\n" );
 						}
+						else if ( ( msgType & ~k_unGCProtoBufFlag ) == k_ESOMsg_Create )
+						{
+							printf( "NEW ITEM\n" );
+						}
+					}
+					else if ( gcResult == k_EGCResultNotLoggedOn )
+					{
+						// disconnected from steam?
+						printf( "[!] GC connection lost\n" );
+						bHelloMsgSent = false;
 					}
 					else
 					{
@@ -434,7 +464,7 @@ int main( int argc, char* argv[] )
 						break;
 					}
 
-					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, 440, "3158168" );
+					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, k_nGameIDTF2, "3158168" );
 					steamGameServer->SetProduct( "tf" );
 					steamGameServer->SetGameDescription( "Team Fortress" );
 					steamGameServer->SetModDir( "tf" );
