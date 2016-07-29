@@ -424,7 +424,24 @@ int main( int argc, char* argv[] )
 						}
 						else if ( ( msgType & ~k_unGCProtoBufFlag ) == k_ESOMsg_Create )
 						{
-							printf( "NEW ITEM\n" );
+							unsigned char* ptr = msg + 8 + 1 + 8 + 1; // skip header & steamid
+							int32 type_id = 0;
+							ptr += ReadProtoNumber( ptr, &type_id, 4 );
+							if (type_id == 1)
+							{
+								uint64 item_id = 0;
+								uint32 def_index = 0;
+								ptr += 2 + 1;
+								ptr += ReadProtoNumber( ptr, &item_id, 8, false );
+								ptr += 1;
+								ptr += ReadProtoNumber( ptr, &def_index, 4 ); // skip account_id
+								ptr += 1;
+								ptr += ReadProtoNumber( ptr, &def_index, 4 ); // skip inventory
+								ptr += 1;
+								ReadProtoNumber( ptr, &def_index, 4 );
+
+								printf( "NEW ITEM: ItemID %llu, Def %u\n", item_id, def_index );
+							}
 						}
 					}
 					else if ( gcResult == k_EGCResultNotLoggedOn )
