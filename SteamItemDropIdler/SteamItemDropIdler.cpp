@@ -392,7 +392,7 @@ int main( int argc, char* argv[] )
 					unsigned char response[] = {
 						0xA6, 0x0F, 0x00, 0x80,      // GC MsgID (k_EMsgGCClientHello)
 						0x00, 0x00, 0x00, 0x00,      // header length (0)
-						0x08, 0x98, 0xE1, 0xC0, 0x01 // protobuf payload (client version)
+						0x08, 0xFD, 0xEE, 0xD8, 0x01 // protobuf payload (client version)
 					};
 					steamGameCoordinator->SendMessage( k_EMsgGCClientHello | k_unGCProtoBufFlag, response, sizeof( response ) );
 					printf( "[*] Sent hello msg to game coordinator\n" );
@@ -487,7 +487,7 @@ int main( int argc, char* argv[] )
 						break;
 					}
 
-					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, k_nGameIDTF2, "3158168" );
+					steamGameServer->InitGameServer( 0, 27015, MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE, k_unServerFlagSecure, k_nGameIDTF2, "3553149" );
 					steamGameServer->SetProduct( "tf" );
 					steamGameServer->SetGameDescription( "Team Fortress" );
 					steamGameServer->SetModDir( "tf" );
