@@ -18,6 +18,32 @@ void ctrl_c_handler( int sig )
 	g_bKeepRunning = false;
 }
 
+void SetStdinEcho( bool enable = true )
+{
+#ifdef WIN32
+	HANDLE hStdin = GetStdHandle( STD_INPUT_HANDLE );
+	DWORD mode;
+	GetConsoleMode( hStdin, &mode );
+
+	if( !enable )
+			mode &= ~ENABLE_ECHO_INPUT;
+	else
+			mode |= ENABLE_ECHO_INPUT;
+
+	SetConsoleMode( hStdin, mode );
+#else
+	// ToDo: Linux support
+	struct termios tty;
+	tcgetattr( STDIN_FILENO, &tty );
+	if( !enable )
+			tty.c_lflag &= ~ECHO;
+	else
+			tty.c_lflag |= ECHO;
+
+	(void) tcsetattr( STDIN_FILENO, TCSANOW, &tty );
+#endif
+}
+
 void shutdown( int code )
 {
 	printf( "Press enter to exit...\n" );
@@ -76,10 +102,13 @@ int main( int argc, char* argv[] )
 		fflush( stdin );
 
 		printf( "Enter your Steam account password: " );
+		SetStdinEcho( false );
 		fgets( steamAccountPassword, sizeof( steamAccountPassword ), stdin );
 		if ( steamAccountPassword[strlen( steamAccountPassword ) - 1] == '\n' ) {
 			steamAccountPassword[strlen( steamAccountPassword ) - 1] = '\0';
 		}
+		printf( "**HIDDEN**\n" );
+		SetStdinEcho( true );
 		fflush( stdin );
 
 		printf( "Enter the AppID: " );
@@ -224,7 +253,10 @@ int main( int argc, char* argv[] )
 							char parentalPinCode[5];
 							printf( "[!] Parental Lock Enabled\n" );
 							printf( "Enter the Parental Pin code (4 digit): " );
+							SetStdinEcho( false );
 							fgets( parentalPinCode, sizeof( parentalPinCode ), stdin );
+							printf( "**HIDDEN**\n" );
+							SetStdinEcho( true );
 							fflush( stdin );
 							if ( !(*(bool( __thiscall** )(IClientUser*, const char *))(*(DWORD*)clientUser + 760))(clientUser, parentalPinCode) ) // UnlockParentalLock()
 							{
@@ -294,10 +326,13 @@ int main( int argc, char* argv[] )
 							printf( "[!] Invalid Steam Guard code\n" );
 						case k_EResultAccountLogonDenied:
 						{
-							char steamGuardCode[33];
+							char steamGuardCode[6];
 							printf( "Enter the Steam Guard code: " );
-							scanf( "%32s", steamGuardCode );
-							getchar();
+							SetStdinEcho( false );
+							fgets( steamGuardCode, sizeof( steamGuardCode ), stdin );
+							printf( "**HIDDEN**\n" );
+							SetStdinEcho( true );
+							fflush( stdin );
 
 							// this is Set2ndFactorAuthCode, however I have to do this because IClientUser.h is outdated
 							(*(void( __thiscall** )(IClientUser*, const char*, bool))(*(DWORD*)clientUser + 676))(clientUser, steamGuardCode, false);
@@ -333,7 +368,10 @@ int main( int argc, char* argv[] )
 							if ( ret != 0 )
 							{
 								printf( "Enter the Steam Mobile Authenticator code: " );
+								SetStdinEcho( false );
 								fgets( steamMobileAuthenticatorCode, sizeof( steamMobileAuthenticatorCode ), stdin );
+								printf( "**HIDDEN**\n" );
+								SetStdinEcho( true );
 								fflush( stdin );
 							}
 
