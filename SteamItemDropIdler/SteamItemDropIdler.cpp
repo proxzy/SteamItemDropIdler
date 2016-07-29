@@ -236,7 +236,7 @@ int main( int argc, char* argv[] )
 				}
 				case LicensesUpdated_t::k_iCallback:
 				{
-					if (appID == 0)
+					if (appID == 0 || bPlayingGame)
 					{
 						break;
 					}
