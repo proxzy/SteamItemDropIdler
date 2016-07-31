@@ -630,7 +630,7 @@ int main( int argc, char* argv[] )
 								{
 									if ( steamInventory->GetItemDefinitionProperty( details[idx].m_iDefinition, "name", szItemName, &unValueBufferSize ) )
 									{
-										printf( "[%02d:%02d:%02d] NEW ITEM: \"%s\" (%llu) - %u\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, szItemName, details[idx].m_itemId, unValueBufferSize );
+										printf( "[%02d:%02d:%02d] NEW ITEM: \"%s\" (%llu)\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, szItemName, details[idx].m_itemId );
 									}
 									else
 									{
