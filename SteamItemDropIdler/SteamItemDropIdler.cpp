@@ -247,21 +247,14 @@ int main( int argc, char* argv[] )
 					if ( (*(bool( __thiscall** )(IClientUser*))(*(DWORD*)clientUser + 764))(clientUser) // BIsParentalLockEnabled()
 					  && (*(bool( __thiscall** )(IClientUser*))(*(DWORD*)clientUser + 768))(clientUser) ) // BIsParentalLockLocked()
 					{
-						if ( (*(bool( __thiscall** )(IClientUser*, EParentalFeature))(*(DWORD*)clientUser + 796))(clientUser, k_EParentalFeatureLibrary) // BIsFeatureBlocked()
-						  && (*(bool( __thiscall** )(IClientUser*, AppId_t))(*(DWORD*)clientUser + 780))(clientUser, appID) ) // BIsAppBlocked()
+						char parentalPinCode[5];
+						printf( "[!] Parental Lock Enabled\n" );
+						printf( "Enter the Parental Pin code (4 digit): " );
+						fgets( parentalPinCode, sizeof( parentalPinCode ), stdin );
+						fflush( stdin );
+						if ( !(*(bool( __thiscall** )(IClientUser*, const char *))(*(DWORD*)clientUser + 760))(clientUser, parentalPinCode) ) // UnlockParentalLock()
 						{
-							char parentalPinCode[5];
-							printf( "[!] Parental Lock Enabled\n" );
-							printf( "Enter the Parental Pin code (4 digit): " );
-							SetStdinEcho( false );
-							fgets( parentalPinCode, sizeof( parentalPinCode ), stdin );
-							printf( "**HIDDEN**\n" );
-							SetStdinEcho( true );
-							fflush( stdin );
-							if ( !(*(bool( __thiscall** )(IClientUser*, const char *))(*(DWORD*)clientUser + 760))(clientUser, parentalPinCode) ) // UnlockParentalLock()
-							{
-								printf( "[!] UnlockParentalLock - fail\n" );
-							}
+							printf( "[!] UnlockParentalLock - fail\n" );
 						}
 					}
 					break;
@@ -328,10 +321,7 @@ int main( int argc, char* argv[] )
 						{
 							char steamGuardCode[6];
 							printf( "Enter the Steam Guard code: " );
-							SetStdinEcho( false );
 							fgets( steamGuardCode, sizeof( steamGuardCode ), stdin );
-							printf( "**HIDDEN**\n" );
-							SetStdinEcho( true );
 							fflush( stdin );
 
 							// this is Set2ndFactorAuthCode, however I have to do this because IClientUser.h is outdated
@@ -368,10 +358,7 @@ int main( int argc, char* argv[] )
 							if ( ret != 0 )
 							{
 								printf( "Enter the Steam Mobile Authenticator code: " );
-								SetStdinEcho( false );
 								fgets( steamMobileAuthenticatorCode, sizeof( steamMobileAuthenticatorCode ), stdin );
-								printf( "**HIDDEN**\n" );
-								SetStdinEcho( true );
 								fflush( stdin );
 							}
 
