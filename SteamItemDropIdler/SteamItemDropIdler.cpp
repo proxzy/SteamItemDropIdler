@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
 #define SIDI_NAME "Steam Item Drop Idler"
-#define SIDI_VERSION "2.03"
+#define SIDI_VERSION "2.04"
 
 const uint32 k_unGCProtoBufFlag = 0x80000000;
 
