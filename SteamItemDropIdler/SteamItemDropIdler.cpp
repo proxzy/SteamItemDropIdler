@@ -226,7 +226,7 @@ int main( int argc, char* argv[] )
 
 	while ( g_bKeepRunning )
 	{
-		if ( clientUser->BLoggedOn() && clientFriends->GetPersonaState() != k_EPersonaStateOnline )
+		if ( clientUser->BLoggedOn() && ( clientFriends->GetPersonaState() == k_EPersonaStateOffline ) )
 		{
 			// Spam happens
 			// printf( "[*] Going online...\n" );
