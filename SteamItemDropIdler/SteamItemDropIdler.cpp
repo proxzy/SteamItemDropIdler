@@ -623,10 +623,19 @@ int main( int argc, char* argv[] )
 							{
 								time_t uTime = time( NULL );
 								tm* localtm = localtime( &uTime );
+								char szItemName[128] = {0};
+								uint32 unValueBufferSize = sizeof( szItemName );
 								SetConsoleTextAttribute( hConsole, FOREGROUND_GREEN | FOREGROUND_BLUE );
 								for ( uint32 idx = 0; idx < itemsCount; ++idx )
 								{
-									printf( "[%02d:%02d:%02d] NEW ITEM: ItemID %llu, Def %d\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, details[idx].m_itemId, details[idx].m_iDefinition );
+									if ( steamInventory->GetItemDefinitionProperty( details[idx].m_iDefinition, "name", szItemName, &unValueBufferSize ) )
+									{
+										printf( "[%02d:%02d:%02d] NEW ITEM: \"%s\" (%llu) - %u\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, szItemName, details[idx].m_itemId, unValueBufferSize );
+									}
+									else
+									{
+										printf( "[%02d:%02d:%02d] NEW ITEM: ItemID %llu, Def %d\n", localtm->tm_hour, localtm->tm_min, localtm->tm_sec, details[idx].m_itemId, details[idx].m_iDefinition );
+									}
 								}
 								SetConsoleTextAttribute( hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
 							}
